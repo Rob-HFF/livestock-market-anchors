@@ -2,11 +2,7 @@
 
 import { useMemo, useState } from "react";
 import PriceChart from "./PriceChart";
-import {
-  computeLatest,
-  SAMPLE_FINISHED_CATTLE_DRESSED,
-  SAMPLE_FINISHED_CATTLE_LIVE,
-} from "./data";
+import { computeLatest, SERIES, type MarketType, type SeriesId } from "./data";
 
 function Card({
   label,
@@ -41,22 +37,26 @@ function ToggleButton({
   active,
   children,
   onClick,
+  disabled,
 }: {
   active: boolean;
   children: React.ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       style={{
         padding: "8px 12px",
         borderRadius: 12,
         border: "1px solid #333",
         background: active ? "#222" : "transparent",
         color: "inherit",
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
         fontWeight: 700,
+        opacity: disabled ? 0.45 : 1,
       }}
     >
       {children}
@@ -65,16 +65,20 @@ function ToggleButton({
 }
 
 export default function AnchorsClient() {
-  const [marketType, setMarketType] = useState<"live" | "dressed">("live");
+  const [seriesId, setSeriesId] = useState<SeriesId>("finished_cattle");
+  const [marketType, setMarketType] = useState<MarketType>("live");
 
-  const points = useMemo(() => {
-    return marketType === "live"
-      ? SAMPLE_FINISHED_CATTLE_LIVE
-      : SAMPLE_FINISHED_CATTLE_DRESSED;
-  }, [marketType]);
+  const series = useMemo(() => SERIES.find((s) => s.id === seriesId)!, [seriesId]);
+
+  // If current marketType isn't supported by the selected series, force it to the first supported one
+  const safeMarketType = useMemo(() => {
+    if (series.supportedMarkets.includes(marketType)) return marketType;
+    return series.supportedMarkets[0];
+  }, [series, marketType]);
+
+  const points = useMemo(() => series.getPoints(safeMarketType), [series, safeMarketType]);
 
   const stats = computeLatest(points);
-  const marketLabel = marketType === "live" ? "Live" : "Dressed";
 
   return (
     <main
@@ -107,29 +111,60 @@ export default function AnchorsClient() {
         </div>
       </header>
 
-      {/* Toggle */}
-      <section style={{ marginTop: 16 }}>
+      {/* Series selector */}
+      <section style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ color: "#bbb", fontSize: 14, fontWeight: 700 }}>Series</div>
+        <select
+          value={seriesId}
+          onChange={(e) => setSeriesId(e.target.value as SeriesId)}
+          style={{
+            padding: "10px 12px",
+            borderRadius: 12,
+            border: "1px solid #333",
+            background: "#111",
+            color: "white",
+            minWidth: 240,
+          }}
+        >
+          {SERIES.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      {/* Market toggle */}
+      <section style={{ marginTop: 12 }}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <ToggleButton
-            active={marketType === "live"}
+            active={safeMarketType === "live"}
             onClick={() => setMarketType("live")}
+            disabled={!series.supportedMarkets.includes("live")}
           >
             Live
           </ToggleButton>
           <ToggleButton
-            active={marketType === "dressed"}
+            active={safeMarketType === "dressed"}
             onClick={() => setMarketType("dressed")}
+            disabled={!series.supportedMarkets.includes("dressed")}
           >
             Dressed
           </ToggleButton>
         </div>
+
+        {!series.supportedMarkets.includes("dressed") ? (
+          <div style={{ color: "#777", fontSize: 13, marginTop: 8 }}>
+            Note: Dressed pricing isn’t available for this series yet (demo mode).
+          </div>
+        ) : null}
       </section>
 
-      {/* Series Info */}
+      {/* Series info */}
       <section style={{ marginTop: 18 }}>
         <div style={{ color: "#bbb", fontSize: 14 }}>
-          <b>Series:</b> Finished Cattle ({marketLabel}) &nbsp;•&nbsp;
-          <b>Unit:</b> $/cwt &nbsp;•&nbsp;
+          <b>Series:</b> {series.label} ({safeMarketType === "live" ? "Live" : "Dressed"}) &nbsp;•&nbsp;
+          <b>Unit:</b> {series.unit} &nbsp;•&nbsp;
           <b>Market:</b> Reference
         </div>
 
@@ -175,7 +210,7 @@ export default function AnchorsClient() {
 
             <p>
               <b>Live vs Dressed:</b> Live = live-weight pricing. Dressed = carcass-weight pricing.
-              Toggle is demo-mode now; Phase 3 will compute both from USDA AMS reports.
+              Some series may not support dressed pricing yet (demo mode).
             </p>
 
             <p>
