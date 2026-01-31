@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import PriceChart, {
+import PriceChart from "./PriceChart";
+import {
   computeLatest,
   SAMPLE_FINISHED_CATTLE_DRESSED,
   SAMPLE_FINISHED_CATTLE_LIVE,
-} from "./PriceChart";
+} from "./data";
 
 function Card({
   label,
@@ -73,7 +74,6 @@ export default function AnchorsClient() {
   }, [marketType]);
 
   const stats = computeLatest(points);
-
   const marketLabel = marketType === "live" ? "Live" : "Dressed";
 
   return (
@@ -85,7 +85,6 @@ export default function AnchorsClient() {
         margin: "0 auto",
       }}
     >
-      {/* Header */}
       <header
         style={{
           display: "flex",
@@ -108,13 +107,19 @@ export default function AnchorsClient() {
         </div>
       </header>
 
-      {/* Market type toggle */}
+      {/* Toggle */}
       <section style={{ marginTop: 16 }}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <ToggleButton active={marketType === "live"} onClick={() => setMarketType("live")}>
+          <ToggleButton
+            active={marketType === "live"}
+            onClick={() => setMarketType("live")}
+          >
             Live
           </ToggleButton>
-          <ToggleButton active={marketType === "dressed"} onClick={() => setMarketType("dressed")}>
+          <ToggleButton
+            active={marketType === "dressed"}
+            onClick={() => setMarketType("dressed")}
+          >
             Dressed
           </ToggleButton>
         </div>
@@ -128,7 +133,7 @@ export default function AnchorsClient() {
           <b>Market:</b> Reference
         </div>
 
-        {/* Anchor Cards */}
+        {/* Anchor cards */}
         <div
           style={{
             display: "grid",
@@ -164,13 +169,13 @@ export default function AnchorsClient() {
 
           <div style={{ marginTop: 12, color: "#bbb", lineHeight: 1.6, fontSize: 14 }}>
             <p style={{ marginTop: 0 }}>
-              <b>Purpose:</b> Reference price anchors to sanity-check assumptions. Informational only — not forecasts,
-              bids, or financial advice.
+              <b>Purpose:</b> Reference price anchors to sanity-check assumptions.
+              Informational only — not forecasts, bids, or financial advice.
             </p>
 
             <p>
-              <b>Live vs Dressed:</b> Live = live-weight pricing. Dressed = carcass-weight pricing. This toggle is
-              demo-mode now; Phase 3 will compute both directly from USDA AMS report rows.
+              <b>Live vs Dressed:</b> Live = live-weight pricing. Dressed = carcass-weight pricing.
+              Toggle is demo-mode now; Phase 3 will compute both from USDA AMS reports.
             </p>
 
             <p>
@@ -178,7 +183,8 @@ export default function AnchorsClient() {
             </p>
 
             <p style={{ marginBottom: 0 }}>
-              <b>Source:</b> USDA AMS market reporting (to be wired in Phase 3). Demo data shown until ingestion is implemented.
+              <b>Source:</b> USDA AMS market reporting (to be wired in Phase 3).
+              Demo data shown until ingestion is implemented.
             </p>
           </div>
         </details>
