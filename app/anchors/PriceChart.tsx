@@ -11,39 +11,35 @@ import {
   Area,
 } from "recharts";
 import { useMemo, useState } from "react";
-
-type Point = {
-  date: string; // YYYY-MM-DD
-  low: number;
-  avg: number;
-  high: number;
-};
-
-const SAMPLE: Point[] = [
-  { date: "2025-01-05", low: 182, avg: 186, high: 190 },
-  { date: "2025-02-02", low: 185, avg: 189, high: 193 },
-  { date: "2025-03-02", low: 188, avg: 192, high: 196 },
-  { date: "2025-04-06", low: 186, avg: 190, high: 194 },
-  { date: "2025-05-04", low: 187, avg: 191, high: 195 },
-  { date: "2025-06-01", low: 190, avg: 194, high: 198 },
-];
+import type { Point } from "./data";
 
 function monthLabel(iso: string) {
   const d = new Date(iso + "T00:00:00");
   return d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
 }
 
-export default function PriceChart() {
+export default function PriceChart({ points }: { points: Point[] }) {
   const [range, setRange] = useState<"6m" | "12m" | "all">("all");
 
   const data = useMemo(() => {
-    if (range === "all") return SAMPLE;
+    if (!points || points.length === 0) return [];
+    if (range === "all") return points;
+
     const cutoffMonths = range === "6m" ? 6 : 12;
-    const last = new Date(SAMPLE[SAMPLE.length - 1].date + "T00:00:00");
+    const last = new Date(points[points.length - 1].date + "T00:00:00");
     const cutoff = new Date(last);
     cutoff.setMonth(cutoff.getMonth() - cutoffMonths);
-    return SAMPLE.filter((p) => new Date(p.date + "T00:00:00") >= cutoff);
-  }, [range]);
+
+    return points.filter((p) => new Date(p.date + "T00:00:00") >= cutoff);
+  }, [range, points]);
+
+  if (!data.length) {
+    return (
+      <div style={{ marginTop: 16, color: "#aaa" }}>
+        No data available for this series.
+      </div>
+    );
+  }
 
   const latest = data[data.length - 1];
 
@@ -72,6 +68,7 @@ export default function PriceChart() {
           >
             6M
           </button>
+
           <button
             onClick={() => setRange("12m")}
             style={{
@@ -85,6 +82,7 @@ export default function PriceChart() {
           >
             12M
           </button>
+
           <button
             onClick={() => setRange("all")}
             style={{
@@ -116,20 +114,21 @@ export default function PriceChart() {
         }}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 10, bottom: 10, left: 0 }}>
+          <LineChart
+            data={data}
+            margin={{ top: 10, right: 10, bottom: 10, left: 0 }}
+          >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="date"
-              tickFormatter={monthLabel}
-              minTickGap={24}
-            />
+            <XAxis dataKey="date" tickFormatter={monthLabel} minTickGap={24} />
             <YAxis />
             <Tooltip
-              formatter={(val: any, name: any) => [`$${val}`, name.toUpperCase()]}
+              formatter={(val: any, name: any) => [
+                `$${val}`,
+                String(name).toUpperCase(),
+              ]}
               labelFormatter={(label) => `Date: ${label}`}
             />
 
-            {/* range band */}
             <Area type="monotone" dataKey="high" stroke="none" fillOpacity={0.08} />
             <Area type="monotone" dataKey="low" stroke="none" fillOpacity={0.08} />
 
@@ -139,10 +138,6 @@ export default function PriceChart() {
           </LineChart>
         </ResponsiveContainer>
       </div>
-
-      <p style={{ marginTop: 10, color: "#888", fontSize: 13 }}>
-        Demo data shown. Next step: pull USDA reports on a schedule and store history.
-      </p>
     </div>
   );
 }
